@@ -29,8 +29,11 @@ jobs:
       - name: lint
         run: |
           yarn lint
+      - name: create-json secret
+        uses: jsdaniell/create-json@v1.2.2
+        with:
+          name: "key.json"
+          json: ${{ secrets.GDOC_KEY }}
       - name: Test generation
-        env:
-          G_API_KEY: ${{ secrets.G_API_KEY }}
         run: |
           node src/generate.js test

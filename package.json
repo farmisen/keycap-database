@@ -13,23 +13,27 @@
     "remap:img": "node src/remap-img.js"
   },
   "devDependencies": {
-    "@types/node": "^17.0.18",
-    "csv-generate": "^4.0.4",
-    "csv-parse": "^5.0.4",
+    "@types/node": "^18.16.3",
+    "csv-generate": "^4.2.5",
+    "csv-parse": "^5.3.9",
     "snazzy": "^9.0.0",
     "standard": "^17.0.0"
   },
   "dependencies": {
+    "@fastify/deepmerge": "^1.3.0",
+    "@googleapis/docs": "^2.0.1",
     "@mixmaxhq/promise-pool": "^2.0.0",
     "ajv": "^6.12.6",
-    "axios": "^0.27.2",
-    "crc": "^4.1.1",
-    "csv-stringify": "^6.0.5",
-    "googleapis": "100",
+    "axios": "^1.6.8",
+    "crc": "^4.3.2",
+    "csv-stringify": "^6.3.3",
+    "googleapis": "134",
     "he": "^1.2.0",
-    "node-html-parser": "^5.3.3",
-    "rimraf": "^3.0.2",
-    "sharp": "^0.30.4",
-    "slugify": "^1.6.5"
+    "jsonpath": "^1.1.1",
+    "lodash": "^4.17.21",
+    "node-html-parser": "^6.1.5",
+    "rimraf": "^5.0.5",
+    "sharp": "^0.32.4",
+    "slugify": "^1.6.6"
   }
 }

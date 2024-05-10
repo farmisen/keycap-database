@@ -15,7 +15,11 @@ const catalogs = {
   albison: 'Albison',
   'mr-worldwide': 'Mr Worldwide',
   'boosted-gamer-set': 'Boosted Gamer Set',
-  geekpora: 'Geekpora'
+  geekpora: 'Geekpora',
+  prayge: 'Prayge',
+  devoura: 'Devoura',
+  lickely: 'Lickely',
+  tut: 'Tut',
 }
 
 const BASE_URL = 'https://alphakeycaps.com/'
@@ -25,7 +29,7 @@ async function CatalogParse (catId) {
   const root = htmlparser.parse(html)
   const colorways = root.querySelectorAll('.intrinsic').map((e) => {
     const name = e.querySelector('.image-caption').querySelector('p').querySelector('strong').childNodes[0].rawText
-    const rawImg = e.querySelector('.thumb-image').rawAttrs
+    const rawImg = e.querySelector('.image-block-wrapper img').rawAttrs
     const m = /data-src="(.*?)"/.exec(rawImg)
     const imgsrc = m[1]
     const re = new RegExp(catId.replace('-', ' '), 'gi')

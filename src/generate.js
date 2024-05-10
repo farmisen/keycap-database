@@ -1,9 +1,11 @@
 const PromisePool = require('@mixmaxhq/promise-pool')
+const _ = require('lodash')
 const fs = require('fs')
 const { stringify } = require('csv-stringify/sync')
 const path = require('path')
 const { scrapFrom } = require('./scraper/gdoc')
 const { flatten } = require('./utils')
+const deepmerge = require('@fastify/deepmerge')({ all: true })
 
 const DEST = path.resolve(path.join(__dirname, '..', 'db'))
 const DESTINATION_JSON = path.join(DEST, 'catalog.json')
@@ -25,7 +27,7 @@ async function moduleScrap (catalog, moduleName, isTest = false) {
   const destFile = path.join(DEST, formattedName)
   if (moduleCatalog.hasError !== true) {
     catalog.push(moduleCatalog)
-    fs.writeFileSync(destFile, JSON.stringify(moduleCatalog))
+    fs.writeFileSync(destFile, JSON.stringify(moduleCatalog, null, ' '))
   } else {
     // using the previous version of the file
     console.warn(`ERRORS: ${formattedName}`)
@@ -36,24 +38,43 @@ async function moduleScrap (catalog, moduleName, isTest = false) {
 
 async function jsonScrap (catalog, filename, isTest = false) {
   const data = JSON.parse(fs.readFileSync(filename, { encoding: 'utf8' }))
-  const scrapFunc = scrapFrom(data.docId, data, data.tabsOperations)
-  const moduleCatalog = await scrapFunc()
 
+  const docsToParse = Array.isArray(data.docId) ? data.docId : [data.docId]
+  let outputCatalog = {}
+  for (const doc of docsToParse) {
+    const scrapFunc = scrapFrom(doc, data, data.tabsOperations)
+    const moduleCatalog = await scrapFunc()
+    outputCatalog = deepmerge(outputCatalog, moduleCatalog)
+  }
   if (isTest) {
-    if (moduleCatalog.hasError) {
-      throw new Error(`${moduleCatalog.name} failed. ${moduleCatalog.error}`)
+    if (outputCatalog.hasError) {
+      throw new Error(`${outputCatalog.name} failed. ${outputCatalog.error}`)
     }
     return
   }
-  const formattedName = `${moduleCatalog.name.toLowerCase().replace(/[ .]/g, '-')}.json`
+  const formattedName = `${outputCatalog.name.toLowerCase().replace(/[ .]/g, '-')}.json`
   const destFile = path.join(DEST, formattedName)
-  if (moduleCatalog.hasError !== true) {
-    catalog.push(moduleCatalog)
-    fs.writeFileSync(destFile, JSON.stringify(moduleCatalog))
+
+  if (docsToParse.length > 1) {
+    const sculptGrp = _.groupBy(outputCatalog.sculpts, 'id')
+
+    const sculpts = []
+    for (const sculptId in sculptGrp) {
+      const sculpt = _.findLast(sculptGrp[sculptId])
+      sculpt.colorways = _.flattenDeep(sculptGrp[sculptId].map(s => s.colorways))
+      sculpts.push(sculpt)
+    }
+
+    outputCatalog.sculpts = sculpts
+  }
+
+  if (outputCatalog.hasError !== true) {
+    catalog.push(outputCatalog)
+    fs.writeFileSync(destFile, JSON.stringify(outputCatalog, null, ' '))
   } else {
     // using the previous version of the file
     console.warn(`ERRORS: ${formattedName}`)
-    console.warn(moduleCatalog.error)
+    console.warn(outputCatalog.error)
     catalog.push(JSON.parse(fs.readFileSync(destFile, 'utf-8')))
   }
 }
@@ -93,9 +114,11 @@ function report (catalog) {
 
 async function generate (isTest = false, targetCat = undefined) {
   let catalog = []
-  const pool = new PromisePool({ numConcurrent: 3 })
+  const pool = new PromisePool({ numConcurrent: 2 })
   const customScraps = fs.readdirSync(customImporterPath)
   const jsonScraps = fs.readdirSync(jsonImporterPath)
+  const total = customScraps.length + jsonScraps.length
+  let idx = 1
   for (const s of customScraps) {
     if (targetCat && !path.join(customImporterPath, s).endsWith(targetCat)) {
       continue
@@ -103,6 +126,7 @@ async function generate (isTest = false, targetCat = undefined) {
     await pool.start(
       async (cat, filename) => {
         await moduleScrap(cat, path.join(customImporterPath, filename), isTest)
+        console.log(`${idx++}/${total}`)
       },
       catalog,
       s
@@ -115,6 +139,7 @@ async function generate (isTest = false, targetCat = undefined) {
     await pool.start(
       async (cat, filename) => {
         await jsonScrap(cat, path.join(jsonImporterPath, filename), isTest)
+        console.log(`${idx++}/${total}`)
       },
       catalog,
       s
